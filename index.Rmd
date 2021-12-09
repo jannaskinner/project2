@@ -46,43 +46,103 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 # Mining, Classification, Prediction
 
-## Name and EID here
+## Janna Skinner jns2978
 
 ### Introduction 
 
+The dataset I will be using is my merged dataset from project 1 which contains lincoln_weather and SeatacWeather which I was able to find on the R data sets and packages. These are weather statistics from Lincoln, Nebraska and Seattle-Tacoma area in Washington. The variables are Location, Month, Year, MaxTemp, MinTemp, and Precipitation. There is a total of 456 observation. For the binary/categorical variable there are 366 observations in the Lincoln group and 90 observations in the Sea-Tac group.
 Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
 
 ```{R}
 library(tidyverse)
-# read your datasets in here, e.g., with read_csv()
-
-# if your dataset needs tidying, do so here
-
-# any other code here
+library(tidyverse)
+library(plyr)
+library(dplyr)
+packageVersion("dplyr")
+library(ggridges)
+library(latticeExtra)
+lincoln_weather <- lincoln_weather %>% separate(CST, c("Year", "Month", 
+    "Day"), sep = "-")
+lincoln_weather <- lincoln_weather %>% select(Year, Month, `Max Temperature [F]`, `Min Temperature [F]`, `Precipitation [In]`)
+lincoln_weather <- lincoln_weather  %>% dplyr::rename(MaxTemp = 'Max Temperature [F]', MinTemp = 'Min Temperature [F]', Precipitation = 'Precipitation [In]')
+lincoln_weather <- transform(lincoln_weather, Year = as.integer(Year))
+lincoln_weather <- transform(lincoln_weather, Month = as.integer(Month))
+lincoln_weather <- transform(lincoln_weather, Precipitation = as.numeric(Precipitation))
+lincoln_weather <- lincoln_weather %>% mutate(Place = "Lincoln")
+SeatacWeather <- SeatacWeather %>% select(year, month, max.temp, min.temp, precip)
+SeatacWeather <- SeatacWeather %>% mutate(month = stringr::str_replace(month, 
+    "January", "1"))
+SeatacWeather <- SeatacWeather %>% mutate(month = stringr::str_replace(month, 
+    "February", "2"))
+SeatacWeather <- SeatacWeather %>% mutate(month = stringr::str_replace(month, 
+    "March", "3"))
+SeatacWeather <- SeatacWeather %>% dplyr::rename(Year = 'year', Month = 'month')
+SeatacWeather <- SeatacWeather %>% mutate(place = "Sea-Tac")
+SeatacWeather <- transform(SeatacWeather, Month = as.integer(Month))
+Weather <- full_join(lincoln_weather, SeatacWeather, by = c("Year", "Month"))
+Weather <- Weather %>% select(Month, Year, MaxTemp, max.temp, MinTemp, min.temp, Precipitation, precip, Place, place)
+Weather <- Weather %>% pivot_longer(3:4,names_to="names", values_to="MaxTemp")
+Weather <- Weather %>% pivot_longer(3:4,names_to="names2", values_to="MinTemp")
+Weather <- Weather %>% pivot_longer(3:4,names_to="names3", values_to="Precip")
+Weather <- Weather %>% pivot_longer(3:4,names_to="names4", values_to="Location")
+Weather <- Weather %>% select(-names, -names2, -names3, -names4)
+Weather <- Weather %>% na.omit()
+Weather <- Weather %>% dplyr::rename(Precipitation = 'Precip')
+Weather <- Weather %>% select(Location, Month, Year, MaxTemp, MinTemp, Precipitation)
+Weather
 ```
 
 ### Cluster Analysis
 
 ```{R}
 library(cluster)
-# clustering code here
+library(GGally)
+
+weather_pam<-vector() 
+for(i in 2:10){  
+  pam_fit <- pam(Weather, k = i)
+  weather_pam[i]<- pam_fit$silinfo$avg.width
+}
+ggplot()+geom_line(aes(x=1:10,y=weather_pam))+scale_x_continuous(name="k",breaks=1:10)
+
+pam1 <- Weather %>% pam(k=2)
+pam1
+
+pamclust<-Weather %>% mutate(cluster=as.factor(pam1$clustering))
+pamclust %>% ggplot(aes(MaxTemp,MinTemp,color=cluster)) + geom_point()
+
+pamclust2<-Weather %>% mutate(cluster=as.factor(pam1$clustering))
+pamclust2 %>% ggplot(aes(MaxTemp,Precipitation,color=cluster)) + geom_point()
+
+pamclust3<-Weather %>% mutate(cluster=as.factor(pam1$clustering))
+pamclust3 %>% ggplot(aes(Precipitation,MinTemp,color=cluster)) + geom_point()
+
+weatherclust <- Weather %>% pam(k=2)
+Weather %>% mutate(cluster=as.factor(weatherclust$clustering)) %>% ggpairs(columns = 1:6,aes(color=cluster))
 ```
 
-Discussion of clustering here
+The widest silhouette value is when k=2 so 2 clusters is ideal for this dataset. The temperature clusters show a distinct difference between the maximum and minimum temperatures recorded. The max temps are near the top right while the min temps are more centered and there is minimal overlap. The max temp and precipitation clusters are heavily concentrated on the x axis and have slightly more overlap than the previous clusters. Lastly, the minimum temperatures and precipitation clusters are heavily concentrated on the y axis and have some overlap as well. Month and year both have negative, weak relationships with precipitation. The highest correlation is between minimum and maximum temperatures at 0.799. 
     
     
 ### Dimensionality Reduction with PCA
 
 ```{R}
-# PCA code here
+weather_pca<-princomp(Weather %>% select(-1),center = T, scale=T)
+summary(weather_pca, cor=T, loadings=T)
+
+library(factoextra)
+fviz_pca_biplot(weather_pca)
+
 ```
 
-Discussions of PCA here. 
+The high PC score between two variables means that there is a strong association between the two. The larger the coefficient, the more it corresponds to the associated variable. If the coefficient is positive it has a positive correlation and if it is negative then the correlation is also negative. 
+
+Max temp and min temp have strong positive values for the month variable which mean they are high in correspondence. Max temp has a positive relationship with year while min temp has a negative relationship with the year variable, this could be due to the fact that the 2 different year values are associated with the 2 different locations. Month and max temp have a higher PC score which entails that they are good predictor variables of each other. It appears that precipitation does not have strong correspondence with any of the other variables. The variable year has the largest proportion of variance in the dataset with month has the second highest association with the dataset, while the last three variables, min temp, max temp, and precipitation all have minimal variance.     
 
 ###  Linear Classifier
 
 ```{R}
-# linear classifier code here
+#do this 
 ```
 
 ```{R}
@@ -121,17 +181,22 @@ Discussion
 
 ```{R}
 library(reticulate)
+use_python("/usr/bin/python3", required = F)
+x = Weather$Precipitation
+y = Weather$MaxTemp
 ```
 
 ```{python}
-# python code here
+import matplotlib.pyplot as plt
+plt.scatter(r.x, r.y, color="red", alpha=.5)
+plt.xlabel('Precipitation')
+plt.ylabel('Maximum Temperatures')
+plt.title('Precipitation levels at Max temps')
+plt.show()
 ```
 
-Discussion
+Python and R can exchange objects between the two languages by using py$ with a python object in the R script, and by using r. with an R object in the Python script. In this python chunk I used r. to take values from r in my dataet to use them in python to make a scatter plot to show precipitation levels at maximum temperatures.
 
-### Concluding Remarks
-
-Include concluding remarks here, if any
 
 
 
