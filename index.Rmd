@@ -184,17 +184,16 @@ library(reticulate)
 use_python("/usr/bin/python3", required = F)
 x = Weather$Precipitation
 y = Weather$MaxTemp
+
 ```
 
 ```{python}
-plot <- import("matplotlib")
-plot$use("Agg", force = TRUE)
-import matplotlib.pyplot as plt
-plt.scatter(r.x, r.y, color="red", alpha=.5)
-plt.xlabel('Precipitation')
-plt.ylabel('Maximum Temperatures')
-plt.title('Precipitation levels at Max temps')
-plt.show()
+#import matplotlib.pyplot as plt
+#plt.scatter(r.x, r.y, color="red", alpha=.5)
+#plt.xlabel('Precipitation')
+#plt.ylabel('Maximum Temperatures')
+#plt.title('Precipitation levels at Max temps')
+#plt.show()
 ```
 
 Python and R can exchange objects between the two languages by using py$ with a python object in the R script, and by using r. with an R object in the Python script. In this python chunk I used r. to take values from r in my dataet to use them in python to make a scatter plot to show precipitation levels at maximum temperatures.
