@@ -187,6 +187,8 @@ y = Weather$MaxTemp
 ```
 
 ```{python}
+plot <- import("matplotlib")
+plot$use("Agg", force = TRUE)
 import matplotlib.pyplot as plt
 plt.scatter(r.x, r.y, color="red", alpha=.5)
 plt.xlabel('Precipitation')
